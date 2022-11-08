@@ -160,8 +160,8 @@ export default class ActivityLogger {
       }
     });
 
-    // Users in Voice
-    (await this.targetServer.channels).filter(channel => channel.type === "voice").forEach(async (channel) => {
+      // Users in Voice
+    (await this.targetServer.channels.cache).filter(channel => channel.type === "voice").forEach(async (channel) => {
       for (const member of channel.members) {
         const username = `${member.user.username}#${member.user.discriminator}`;
 
