@@ -1,5 +1,20 @@
-import { MongoClient } from "mongodb";
-import { EmbedBuilder } from "discord.js"
+import {
+  MongoClient,
+  Db,
+  Collection,
+} from "mongodb";
+
+import {
+  Client,
+  EmbedBuilder,
+  Guild,
+  PermissionResolvable,
+  Message,
+  User,
+  GuildTextBasedChannel,
+  GuildMember,
+  VoiceChannel,
+} from "discord.js"
 
 import { DatabaseObject } from "types";
 
@@ -13,14 +28,13 @@ import {
 require("dotenv").config();
 
 export default class ActivityLogger {
-  client: any;
-  targetServer: any;
-  adminRole: any;
+  client: Client;
+  targetServer: Guild;
 
-  db: any;
-  collection: any;
+  db: Db;
+  collection: Collection;
 
-  constructor(client: any) {
+  constructor(client: Client) {
     this.client = client;
 
     this.init();
@@ -30,8 +44,7 @@ export default class ActivityLogger {
     try {
       // General
       const it = this;
-      this.targetServer = await this.client.guilds.cache.get(process.env.SERVER_ID.toString());
-      this.adminRole = this.targetServer.roles.cache.find(role => role.name === "Administrator");
+      this.targetServer = this.client.guilds.cache.get(process.env.SERVER_ID.toString());
 
       // Database Setup
       const mongodb = new MongoClient("mongodb://localhost:27017/trgr");
@@ -49,7 +62,7 @@ export default class ActivityLogger {
       this.collection = this.db.collection("members");
 
       // Event Listeners
-      this.client.on("messageCreate", (message) => this.onServerMessage(message));
+      this.client.on("messageCreate", (message: Message) => this.onServerMessage(message));
 
       // Monitor on Interval
       setInterval(() => it.monitor(), MonitorInterval * 1000);
@@ -59,9 +72,9 @@ export default class ActivityLogger {
     }
   }
 
-  async printStats(message) {
-    if (message.channel.id.toString() !== "1038511123432996884") {
-      const reply = message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#1038511123432996884>!`);
+  async printStats(message: Message) {
+    if (message.channel.id.toString() !== process.env.BOT_CHANNEL_ID) {
+      const reply = await message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#${process.env.BOT_CHANNEL_ID}>!`);
       message.delete({timeout: 5000});
       reply.delete({timeout: 5000});
       return;
@@ -70,7 +83,7 @@ export default class ActivityLogger {
     const betterMessage: string[] = message.content.split(" ");
     if (betterMessage.length < 3) {
       // print default
-      const toPrint = await this.collection.find().sort({points:-1}).limit(5).toArray();
+      const toPrint: DatabaseObject[] = await this.collection.find().sort({points:-1}).limit(5).toArray();
 
       const fields: { name: string; value: string }[] = [];
 
@@ -121,7 +134,7 @@ export default class ActivityLogger {
       // print desc
       const toPrint = await this.collection.find().sort({points: 1}).limit(5).toArray();
 
-      let fields: { name: string; value: string }[] = [];
+      const fields: { name: string; value: string }[] = [];
 
       toPrint.forEach((member: DatabaseObject, index: number) => {
         const lastMessaged = member.lastMessaged > 0 ? `<t:${member.lastMessaged} <t:${member.lastMessaged}:R>` : "Not Available";
@@ -164,7 +177,7 @@ export default class ActivityLogger {
       // print with custom limit
       const toPrint = await this.collection.find().sort({ points: desc ? 1 : -1 }).limit(limit).toArray();
 
-      let fields: { name: string; value: string }[] = [];
+      const fields: { name: string; value: string }[] = [];
 
       toPrint.forEach((member: DatabaseObject, index: number) => {
         const lastMessaged = member.lastMessaged > 0 ? `<t:${member.lastMessaged} <t:${member.lastMessaged}:R>` : "Not Available";
@@ -199,12 +212,12 @@ export default class ActivityLogger {
     }
 
     // contains 1 or more mentions
-    const mentions = await message.mentions.users;
+    const mentions = message.mentions.users;
     const hasMentions = mentions.size > 0;
     if (hasMentions && !message.mentions.everyone) {
       const fields: { name: string, value: string }[] = []
 
-      const userIds = mentions.map(mention => mention.id);
+      const userIds = mentions.map((mention: User) => mention.id);
       const members = await this.collection.find({ user_id: { $in: userIds } }, {}).sort({ points: desc ? 1 : -1 }).toArray();
 
       for (const member of members) {
@@ -244,9 +257,9 @@ export default class ActivityLogger {
     console.trace();
   }
 
-  async help(message) {
-    if (message.channel.id.toString() !== "1038511123432996884") {
-      const reply = message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#1038511123432996884>!`);
+  async help(message: Message) {
+    if (message.channel.id.toString() !== process.env.BOT_CHANNEL_ID) {
+      const reply = await message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#${process.env.BOT_CHANNEL_ID}>!`);
       message.delete({timeout: 5000});
       reply.delete({timeout: 5000});
     }
@@ -290,12 +303,11 @@ export default class ActivityLogger {
     await message.channel.send({ embeds: [embed] });
   }
 
-  async handleCommand(message) {
-    const user = await this.targetServer.members.cache.get(message.author.id);
-    // console.log(`${user} | ${message.channel.name} | ${message.channel.id}`)
+  async handleCommand(message: Message) {
+    const user = this.targetServer.members.cache.get(message.author.id);
 
-    if (!user.permissions.has("ADMINISTRATOR")) {
-      await message.reply(`${this.adminRole} ο φίλος <@${message.author.id}> θέλει να πάθει κακό!`);
+    if (!user.permissions.has(process.env.ADMIN_ROLE_ID as PermissionResolvable)) {
+      await message.reply(`<@&${process.env.ADMIN_ROLE_ID}> ο φίλος <@${message.author.id}> θέλει να πάθει κακό!`);
       return;
     }
 
@@ -314,7 +326,7 @@ export default class ActivityLogger {
         } else if (toDelete > 1000) {
           await message.reply("Μέχρι 1000 την φορά...");
         } else {
-          await message.channel.bulkDelete(toDelete);
+          await (message.channel as GuildTextBasedChannel).bulkDelete(toDelete);
         }
         break;
       }
@@ -327,8 +339,12 @@ export default class ActivityLogger {
     }
   }
 
-  async onServerMessage(message) {
+  async onServerMessage(message: Message) {
     if (message.author.bot) {
+      return;
+    }
+
+    if (!message.member.roles.cache.has(process.env.TR_ROLE_ID)) {
       return;
     }
 
@@ -345,11 +361,11 @@ export default class ActivityLogger {
       this.collection.insertOne({
         username: username,
         user_id: message.author.id,
-        points: 0,
-        totalMessages: 0,
-        lastMessaged: -1,
+        points: PointsForMessage,
+        totalMessages: 1,
+        lastMessaged: Math.floor(Date.now() / 1000),
         lastVoiceJoined: -1,
-        lastOnline: Math.floor(Date.now() / 1000),
+        lastOnline: -1,
       } as DatabaseObject);
     }
 
@@ -375,24 +391,30 @@ export default class ActivityLogger {
     // Update Server Cache
     await this.targetServer.fetch();
 
-    const usernamesOnline = (await this.targetServer.members.cache).filter(member => {
+    const usernamesOnline = this.targetServer.members.cache.filter((member: GuildMember) => {
         return (
           !member.user.bot &&
           member.presence &&
-          member.presence.status !== "offline"
+          member.presence.status !== "offline" &&
+          member.roles.cache.has(process.env.TR_ROLE_ID)
         );
       })
-      .map(member => `${member.user.username}#${member.user.discriminator}(^_^)${member.user.id}`);
+      .map((member: GuildMember) => `${member.user.username}#${member.user.discriminator}(^_^)${member.user.id}`);
 
-    const usernamesInChannels: any[] = (await this.targetServer.channels.cache).filter(channel => {
+    const usernamesInChannels = this.targetServer.channels.cache.filter((channel: VoiceChannel) => {
         return (
           channel.type === 2 &&
-          channel.id !== "657658422459891734" // AFK channel
+          channel.id !== process.env.AFK_CHANNEL_ID // AFK channel
         );
       })
-      .map(channel => channel.members.map(member => `${member.user.username}#${member.user.discriminator}(^_^)${member.user.id}`).flat()).flat();
+      .map((channel: VoiceChannel) => channel.members
+        .filter((member: GuildMember) => member.roles.cache.has(process.env.TR_ROLE_ID))
+        .map((member: GuildMember) => `${member.user.username}#${member.user.discriminator}(^_^)${member.user.id}`)
+        .flat()
+      )
+      .flat();
 
-    const allUsernames: any[] = Array.from(new Set([
+    const allUsernames = Array.from(new Set([
       ...usernamesOnline,
       ...usernamesInChannels,
     ]));

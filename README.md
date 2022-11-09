@@ -10,6 +10,12 @@ Create a `.env` file in the root of the project to store the following:
 DISCORD_BOT_TOKEN='your token'
 
 SERVER_ID='the server id you care about'
+
+BOT_CHANNEL_ID='the channel for the bot commands'
+AFK_CHANNEL_ID='the voice channel marked for AFK'
+
+TR_ROLE_ID='the GoGo Tower Rangers role id'
+ADMIN_ROLE_ID='the Administrator role id'
 ```
 
 - Node.js version 16

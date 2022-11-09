@@ -25,6 +25,15 @@ if (!client || client == null || client == undefined) {
 
 function botReady() {
   console.log(`Logged in as ${client.user.tag}!`);
+  client.user.setPresence({
+    status: "online",
+    activities: [
+      {
+        name: "your every move!",
+        type: 3,
+      }
+    ],
+  });
   activityLogger = new ActivityLogger(client);
 }
 
