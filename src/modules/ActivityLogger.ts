@@ -75,15 +75,17 @@ export default class ActivityLogger {
   async printStats(message: Message) {
     if (message.channel.id.toString() !== process.env.BOT_CHANNEL_ID) {
       const reply = await message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#${process.env.BOT_CHANNEL_ID}>!`);
-      message.delete({timeout: 5000});
-      reply.delete({timeout: 5000});
+      setTimeout(() => {
+        message.delete();
+        reply.delete();
+      }, 5000);
       return;
     }
 
     const betterMessage: string[] = message.content.split(" ");
     if (betterMessage.length < 3) {
       // print default
-      const toPrint: DatabaseObject[] = await this.collection.find().sort({points:-1}).limit(5).toArray();
+      const toPrint: DatabaseObject[] = (await this.collection.find().sort({points:-1}).limit(5).toArray()) as DatabaseObject[];
 
       const fields: { name: string; value: string }[] = [];
 
@@ -260,8 +262,10 @@ export default class ActivityLogger {
   async help(message: Message) {
     if (message.channel.id.toString() !== process.env.BOT_CHANNEL_ID) {
       const reply = await message.reply(`Λάθος κανάλι φίλε <@${message.author.id}>. Δοκίμασε το <#${process.env.BOT_CHANNEL_ID}>!`);
-      message.delete({timeout: 5000});
-      reply.delete({timeout: 5000});
+      setTimeout(() => {
+        message.delete();
+        reply.delete();
+      }, 5000);
     }
 
     const embed = new EmbedBuilder()
