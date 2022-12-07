@@ -90,7 +90,7 @@ export default class ActivityLogger {
       const fields: { name: string; value: string }[] = [];
 
       toPrint.forEach((member: DatabaseObject, index: number) => {
-        const lastMessaged = member.lastMessaged > 0 ? `<t:${member.lastMessaged} <t:${member.lastMessaged}:R>` : "Not Available";
+        const lastMessaged = member.lastMessaged > 0 ? `<t:${member.lastMessaged}> <t:${member.lastMessaged}:R>` : "Not Available";
         const lastVoiceJoined = member.lastVoiceJoined > 0 ? `<t:${member.lastVoiceJoined}> <t:${member.lastVoiceJoined}:R>` : "Not Available";
         const lastOnline = member.lastOnline > 0 ? `<t:${member.lastOnline}> <t:${member.lastOnline}:R>` : "Not Available";
 
